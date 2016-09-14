@@ -16,15 +16,16 @@ class VideoSequenceGenerator(object):
         self.clip_ids = numpy.mod(clips_int, 3)
 
         self.unique_subj_ids = numpy.unique(self.subj_ids)
-        self.unique_clip_ids = numpy.unique(self.clip_ids)        
+        self.unique_emotion_labels = numpy.unique(self.emotion_labels)
+        self.unique_clip_ids = numpy.unique(self.clip_ids)               
     
     def next(self, subj_id=None, emotion_label=None, clip_id=None):
         # If subject id, emotion, or clip is not specified, randomly pick one
-        if subj_id is None:            
+        if subj_id is None:
             subj_id = numpy.random.choice(self.unique_subj_ids)
                     
-        if emotion_label is None:
-            emotion_label = numpy.random.choice(11)            
+        if emotion_label is None:            
+            emotion_label = numpy.random.choice(self.unique_emotion_labels)          
         
         if clip_id is None:            
             clip_id = numpy.random.choice(self.unique_clip_ids)            
@@ -32,10 +33,15 @@ class VideoSequenceGenerator(object):
         if self.verbose:
             print 'Possible subjects: %s' % self.unique_subj_ids
             print 'Chosen subject: %s' % subj_id
-            print 'Chosen Emotion Label: %d' % emotion_label
+            print 'Possible emotion labels: %s' % self.unique_emotion_labels
+            print 'Chosen emotion label: %d' % emotion_label
             print 'Possible clip indices: %s' % self.unique_clip_ids
             print 'Clip chosen: %d' % clip_id
-        
+
+        assert subj_id in self.unique_subj_ids, 'Subject %s not found.' % subj_id   
+        assert emotion_label in self.unique_emotion_labels, 'Emotion %d not found.' % emotion_label
+        assert clip_id in self.unique_clip_ids, 'Clip %d not found.' % clip_id
+
         # Create mask based on subject id, emotion, and clip number
         subj_mask = (self.subj_ids == subj_id)
         emotion_mask = (self.emotion_labels == emotion_label)
