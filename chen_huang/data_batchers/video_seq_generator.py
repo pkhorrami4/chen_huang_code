@@ -48,7 +48,8 @@ class VideoSequenceGenerator(object):
         clip_mask = (self.clip_ids == clip_id)
         inds = numpy.where(numpy.logical_and(numpy.logical_and(subj_mask, emotion_mask), 
                                              clip_mask))[0]
-        X_ = self.X[inds, :, :, :]
+
+        X_ = self.X[inds, :]
         y_ = numpy.array(emotion_label)
         
         if self.verbose:
@@ -72,4 +73,23 @@ class VideoSequenceGenerator(object):
             if self.verbose:
                 print ''
             
+        return x_batch, y_batch
+
+
+class FeatureSequenceGenerator(VideoSequenceGenerator):
+    def get_batch(self):
+        x_batch = numpy.zeros((self.batch_size, self.max_seq_length, self.X.shape[1]))
+        y_batch = numpy.zeros(self.batch_size)
+        seq_lengths = numpy.zeros(self.batch_size)
+
+        for i in range(self.batch_size):
+            if self.verbose:
+                print 'Adding sample %d' % i
+            x_, y_ = self.next()
+            seq_length = x_.shape[0]
+            x_batch[i, 0:seq_length, :] = x_
+            y_batch[i] = y_
+            if self.verbose:
+                print ''
+
         return x_batch, y_batch
