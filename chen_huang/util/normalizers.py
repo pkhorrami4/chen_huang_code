@@ -4,7 +4,8 @@ import numpy
 
 class LandmarkFeatureNormalizer(object):
     def __init__(self, npy_file_path, fold_type, fold):
-        assert fold_type in ['subj_dep', 'subj_ind'], 'fold_type must be subj_dep or subj_ind'
+        assert fold_type in ['subj_dep', 'subj_ind'
+                             ], 'fold_type must be subj_dep or subj_ind'
 
         if fold_type == 'subj_dep':
             assert fold in range(3), 'fold %d does not exist' % fold
@@ -15,9 +16,9 @@ class LandmarkFeatureNormalizer(object):
         self.fold_type = fold_type
         self.fold = fold
 
-        self.npy_filename = os.path.join(npy_file_path, 
-                                         'global_stats_'+fold_type+'.npy')
-        
+        self.npy_filename = os.path.join(npy_file_path,
+                                         'global_stats_' + fold_type + '.npy')
+
         global_stats_dict = numpy.load(self.npy_filename)
         global_stats_dict = global_stats_dict[()]
 
