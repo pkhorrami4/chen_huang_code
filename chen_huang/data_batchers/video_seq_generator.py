@@ -70,10 +70,11 @@ class VideoSequenceGenerator(object):
             seq_length = x_.shape[0]
             x_batch[i, 0:seq_length, :, :, :] = x_
             y_batch[i] = y_
+            seq_lengths[i] = seq_length
             if self.verbose:
                 print ''
             
-        return x_batch, y_batch
+        return x_batch, y_batch, seq_lengths
 
 
 class FeatureSequenceGenerator(VideoSequenceGenerator):
@@ -89,7 +90,8 @@ class FeatureSequenceGenerator(VideoSequenceGenerator):
             seq_length = x_.shape[0]
             x_batch[i, 0:seq_length, :] = x_
             y_batch[i] = y_
+            seq_lengths[i] = seq_length
             if self.verbose:
                 print ''
 
-        return x_batch, y_batch
+        return x_batch, y_batch, seq_lengths
