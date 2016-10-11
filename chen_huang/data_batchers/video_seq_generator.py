@@ -9,7 +9,7 @@ class VideoSequenceGenerator(object):
         self.batch_size = batch_size
         self.max_seq_length = max_seq_length
         self.verbose = verbose
-        
+
         self.subj_ids = self.y[0, :]
         self.emotion_labels = y[-2, :].astype('int')
         clips_int = self.y[1, :].astype('int')
@@ -17,18 +17,18 @@ class VideoSequenceGenerator(object):
 
         self.unique_subj_ids = numpy.unique(self.subj_ids)
         self.unique_emotion_labels = numpy.unique(self.emotion_labels)
-        self.unique_clip_ids = numpy.unique(self.clip_ids)               
-    
+        self.unique_clip_ids = numpy.unique(self.clip_ids)
+
     def next(self, subj_id=None, emotion_label=None, clip_id=None):
         # If subject id, emotion, or clip is not specified, randomly pick one
         if subj_id is None:
             subj_id = numpy.random.choice(self.unique_subj_ids)
-                    
-        if emotion_label is None:            
-            emotion_label = numpy.random.choice(self.unique_emotion_labels)          
-        
-        if clip_id is None:            
-            clip_id = numpy.random.choice(self.unique_clip_ids)            
+
+        if emotion_label is None:
+            emotion_label = numpy.random.choice(self.unique_emotion_labels)
+
+        if clip_id is None:
+            clip_id = numpy.random.choice(self.unique_clip_ids)
 
         if self.verbose:
             print 'Possible subjects: %s' % self.unique_subj_ids
@@ -38,7 +38,7 @@ class VideoSequenceGenerator(object):
             print 'Possible clip indices: %s' % self.unique_clip_ids
             print 'Clip chosen: %d' % clip_id
 
-        assert subj_id in self.unique_subj_ids, 'Subject %s not found.' % subj_id   
+        assert subj_id in self.unique_subj_ids, 'Subject %s not found.' % subj_id
         assert emotion_label in self.unique_emotion_labels, 'Emotion %d not found.' % emotion_label
         assert clip_id in self.unique_clip_ids, 'Clip %d not found.' % clip_id
 
@@ -46,51 +46,55 @@ class VideoSequenceGenerator(object):
         subj_mask = (self.subj_ids == subj_id)
         emotion_mask = (self.emotion_labels == emotion_label)
         clip_mask = (self.clip_ids == clip_id)
-        inds = numpy.where(numpy.logical_and(numpy.logical_and(subj_mask, emotion_mask), 
-                                             clip_mask))[0]
+        inds = numpy.where(
+            numpy.logical_and(
+                numpy.logical_and(subj_mask, emotion_mask), clip_mask))[0]
 
         X_ = self.X[inds, :]
         y_ = numpy.array(emotion_label)
-        
+        seq_length_ = numpy.array(X_.shape[0])
+
         if self.verbose:
             print X_.shape, y_.shape
-        
-        return X_, y_
-        
-    def get_batch(self):
-        x_batch = numpy.zeros((self.batch_size, self.max_seq_length,
-                              self.X.shape[1], self.X.shape[2], self.X.shape[3]))
-        y_batch = numpy.zeros(self.batch_size)
-        seq_lengths = numpy.zeros(self.batch_size)
-        
-        for i in range(self.batch_size):            
-            if self.verbose:
-                print 'Adding sample %d' % i            
-            x_, y_ = self.next()
-            seq_length = x_.shape[0]
-            x_batch[i, 0:seq_length, :, :, :] = x_
-            y_batch[i] = y_
-            seq_lengths[i] = seq_length
-            if self.verbose:
-                print ''
-            
-        return x_batch, y_batch, seq_lengths
 
+        return X_, y_, seq_length_
 
-class FeatureSequenceGenerator(VideoSequenceGenerator):
     def get_batch(self):
-        x_batch = numpy.zeros((self.batch_size, self.max_seq_length, self.X.shape[1]))
+        x_batch = numpy.zeros(
+            (self.batch_size, self.max_seq_length, self.X.shape[1],
+             self.X.shape[2], self.X.shape[3]))
         y_batch = numpy.zeros(self.batch_size)
         seq_lengths = numpy.zeros(self.batch_size)
 
         for i in range(self.batch_size):
             if self.verbose:
                 print 'Adding sample %d' % i
-            x_, y_ = self.next()
-            seq_length = x_.shape[0]
-            x_batch[i, 0:seq_length, :] = x_
+
+            x_, y_, seq_length_ = self.next()
+            x_batch[i, 0:seq_length_, :, :, :] = x_
             y_batch[i] = y_
-            seq_lengths[i] = seq_length
+            seq_lengths[i] = seq_length_
+            if self.verbose:
+                print ''
+
+        return x_batch, y_batch, seq_lengths
+
+
+class FeatureSequenceGenerator(VideoSequenceGenerator):
+    def get_batch(self):
+        x_batch = numpy.zeros(
+            (self.batch_size, self.max_seq_length, self.X.shape[1]))
+        y_batch = numpy.zeros(self.batch_size)
+        seq_lengths = numpy.zeros(self.batch_size)
+
+        for i in range(self.batch_size):
+            if self.verbose:
+                print 'Adding sample %d' % i
+
+            x_, y_, seq_length_ = self.next()
+            x_batch[i, 0:seq_length_, :] = x_
+            y_batch[i] = y_
+            seq_lengths[i] = seq_length_
             if self.verbose:
                 print ''
 
