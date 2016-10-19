@@ -19,6 +19,9 @@ class VideoSequenceGenerator(object):
         self.unique_emotion_labels = numpy.unique(self.emotion_labels)
         self.unique_clip_ids = numpy.unique(self.clip_ids)
 
+        self.global_clip_ids = numpy.array(sorted(self.y[-1, :].astype('int')))
+        self.unique_global_clips_ids = numpy.unique(self.global_clip_ids)
+
     def next(self, subj_id=None, emotion_label=None, clip_id=None):
         # If subject id, emotion, or clip is not specified, randomly pick one
         if subj_id is None:
@@ -99,3 +102,31 @@ class FeatureSequenceGenerator(VideoSequenceGenerator):
                 print ''
 
         return x_batch, y_batch, seq_lengths
+
+    def fetch_all_samples(self):
+        num_clips = len(self.unique_global_clips_ids)
+        x_all = numpy.zeros((num_clips, self.max_seq_length, self.X.shape[1]))
+        y_all = numpy.zeros(num_clips)
+        seq_lengths = numpy.zeros(num_clips)
+        # print x_batch.shape, y_batch.shape, seq_lengths.shape
+
+        for i, clip_id in enumerate(self.unique_global_clips_ids):
+            if self.verbose:
+                print 'Processing clip: %d' % clip_id
+
+            inds = numpy.where(self.global_clip_ids == clip_id)[0]
+            y_clip = self.y[:, inds]
+
+            x_ = self.X[inds, :]
+            emotion_labels = self.emotion_labels[inds]
+            y_ = numpy.array(emotion_labels[0])
+            seq_length_ = numpy.array(x_.shape[0])
+
+            if self.verbose:
+                print x_.shape, y_clip.shape
+
+            x_all[i, 0:seq_length_, :] = x_
+            y_all[i] = y_
+            seq_lengths[i] = seq_length_
+
+        return x_all, y_all, seq_lengths
