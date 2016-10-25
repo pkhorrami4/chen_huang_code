@@ -15,7 +15,7 @@ class LandmarkSelector(object):
                               'nose': numpy.arange(54, 72),
                               'eye_r': numpy.arange(72, 84),
                               'eye_l': numpy.arange(84, 96),
-                              'mouth': numpy.arange(96, 168)}
+                              'mouth': numpy.arange(96, 136)}
 
     def run(self, x_batch):
         inds_to_take = []
