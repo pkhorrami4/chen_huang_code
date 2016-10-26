@@ -238,5 +238,5 @@ class RecurrentModel(object):
         # Save the variables to disk.
         save_path = self.saver.save(self.sess,
                                     os.path.join(self.save_path,
-                                                 save_filename))
+                                                 save_filename)+'.ckpt')
         print("Model saved in file: %s" % save_path)
