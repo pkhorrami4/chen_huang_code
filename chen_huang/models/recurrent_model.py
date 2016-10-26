@@ -102,7 +102,7 @@ class RecurrentModel(object):
         tf.scalar_summary('total_cost', self.total_cost)
         tf.scalar_summary('accuracy', self.accuracy)
         self.merged = tf.merge_all_summaries()
-        self.summary_writer = tf.train.SummaryWriter('./logs/',
+        self.summary_writer = tf.train.SummaryWriter(self.summary_path,
                                                      self.sess.graph)
 
         # Add saver
@@ -120,8 +120,11 @@ class RecurrentModel(object):
         self.num_layers = model_dict['num_layers']
         self.learning_rate = model_dict['learning_rate']
         self.save_path = model_dict['save_path']
+        self.summary_path = model_dict['summary_path']
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
+        if not os.path.exists(self.summary_path):
+            os.makedirs(self.summary_path)
 
         if verbose:
             print 'input_size: %d' % self.input_size
