@@ -101,9 +101,12 @@ class RecurrentModel(object):
         tf.scalar_summary('learning_rate', self.learning_rate)
         tf.scalar_summary('total_cost', self.total_cost)
         tf.scalar_summary('accuracy', self.accuracy)
+        tf.scalar_summary('accuracy_clip', self.accuracy_clip)
         self.merged = tf.merge_all_summaries()
-        self.summary_writer = tf.train.SummaryWriter(self.summary_path,
-                                                     self.sess.graph)
+        self.summary_writer_train = tf.train.SummaryWriter(self.summary_path+'/train',
+                                                           self.sess.graph)
+        self.summary_writer_val = tf.train.SummaryWriter(self.summary_path+'/val',
+                                                         self.sess.graph)
 
         # Add saver
         self.saver = tf.train.Saver()
@@ -208,18 +211,18 @@ class RecurrentModel(object):
                      self.targets: y_batch,
                      self.sequence_lengths: seq_lengths_batch,
                      self.mask: mask}
-        cost_val = self.sess.run(self.total_cost, feed_dict=feed_dict)
-        return cost_val
+        cost_ = self.sess.run(self.total_cost, feed_dict=feed_dict)
+        return cost_
 
     def train(self, x_batch, y_batch, seq_lengths_batch, mask):
         feed_dict = {self.inputs: x_batch,
                      self.targets: y_batch,
                      self.sequence_lengths: seq_lengths_batch,
                      self.mask: mask}
-        cost_train, accuracy_train, summary, _ = self.sess.run(
-            [self.total_cost, self.accuracy, self.merged, self.train_op],
+        cost_train, accuracy_train, accuracy_clip_train, summary_train, _ = self.sess.run(
+            [self.total_cost, self.accuracy, self.accuracy_clip, self.merged, self.train_op],
             feed_dict=feed_dict)
-        return cost_train, accuracy_train, summary
+        return cost_train, accuracy_train, accuracy_clip_train, summary_train
 
     def predict(self, x_batch, seq_lengths_batch, mask):
         feed_dict = {self.inputs: x_batch,
@@ -230,6 +233,16 @@ class RecurrentModel(object):
             [self.batch_size, self.max_sequence_length, self.num_classes])
         predictions = self.sess.run(softmax_r, feed_dict=feed_dict)
         return predictions
+
+    def val_batch(self, x_batch, y_batch, seq_lengths_batch, mask):
+        feed_dict = {self.inputs: x_batch,
+                     self.targets: y_batch,
+                     self.sequence_lengths: seq_lengths_batch,
+                     self.mask: mask}
+        cost_val, accuracy_val, accuracy_clip_val, summary_val = self.sess.run(
+            [self.total_cost, self.accuracy, self.accuracy_clip, self.merged],
+            feed_dict=feed_dict)
+        return cost_val, accuracy_val, accuracy_clip_val, summary_val
 
     def load(self, checkpoint):
         self.saver.restore(self.sess, checkpoint)
