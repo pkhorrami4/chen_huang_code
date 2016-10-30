@@ -109,7 +109,7 @@ class RecurrentModel(object):
                                                          self.sess.graph)
 
         # Add saver
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(max_to_keep=None)
 
         self.sess.run(tf.initialize_all_variables())
 
