@@ -90,13 +90,13 @@ class RecurrentModel(object):
         global_step = tf.Variable(0, trainable=False)
         starter_lr = tf.Variable(self.learning_rate, trainable=False)
         if self.decay_lr:
-            decay_steps = 1400
-            decay_rate = 0.1
+            #decay_steps = 1400
+            #decay_rate = 0.1
             lr = tf.train.exponential_decay(
                 starter_lr,
                 global_step,
-                decay_steps,
-                decay_rate,
+                self.decay_steps,
+                self.decay_rate,
                 staircase=True)
         else:
             lr = starter_lr
@@ -140,6 +140,10 @@ class RecurrentModel(object):
         self.num_layers = model_dict['num_layers']
         self.learning_rate = model_dict['learning_rate']
         self.decay_lr = model_dict['decay_lr']
+        if self.decay_lr:
+            self.decay_steps = model_dict['decay_steps']
+            self.decay_rate = model_dict['decay_rate']
+
         self.save_path = model_dict['save_path']
         self.summary_path = model_dict['summary_path']
         if not os.path.exists(self.save_path):
