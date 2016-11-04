@@ -86,12 +86,9 @@ class RecurrentModel(object):
             print 'total cost shape: ', self.total_cost.get_shape()
 
         # Create optimizer
-        #lr = tf.Variable(self.learning_rate, trainable=False)
         global_step = tf.Variable(0, trainable=False)
         starter_lr = tf.Variable(self.learning_rate, trainable=False)
         if self.decay_lr:
-            #decay_steps = 1400
-            #decay_rate = 0.1
             lr = tf.train.exponential_decay(
                 starter_lr,
                 global_step,
