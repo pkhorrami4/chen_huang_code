@@ -95,7 +95,9 @@ class RecurrentModel(object):
         self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
 
         # Setup Session
-        self.sess = tf.Session()
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+        #self.sess = tf.Session()
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
         # Grab summaries for Tensorboard
         tf.scalar_summary('learning_rate', self.learning_rate)
@@ -103,10 +105,10 @@ class RecurrentModel(object):
         tf.scalar_summary('accuracy', self.accuracy)
         tf.scalar_summary('accuracy_clip', self.accuracy_clip)
         self.merged = tf.merge_all_summaries()
-        self.summary_writer_train = tf.train.SummaryWriter(self.summary_path+'/train',
-                                                           self.sess.graph)
-        self.summary_writer_val = tf.train.SummaryWriter(self.summary_path+'/val',
-                                                         self.sess.graph)
+        self.summary_writer_train = tf.train.SummaryWriter(
+            self.summary_path + '/train', self.sess.graph)
+        self.summary_writer_val = tf.train.SummaryWriter(
+            self.summary_path + '/val', self.sess.graph)
 
         # Add saver
         self.saver = tf.train.Saver(max_to_keep=None)
@@ -220,7 +222,8 @@ class RecurrentModel(object):
                      self.sequence_lengths: seq_lengths_batch,
                      self.mask: mask}
         cost_train, accuracy_train, accuracy_clip_train, summary_train, _ = self.sess.run(
-            [self.total_cost, self.accuracy, self.accuracy_clip, self.merged, self.train_op],
+            [self.total_cost, self.accuracy, self.accuracy_clip, self.merged,
+             self.train_op],
             feed_dict=feed_dict)
         return cost_train, accuracy_train, accuracy_clip_train, summary_train
 
@@ -249,7 +252,6 @@ class RecurrentModel(object):
 
     def save(self, save_filename):
         # Save the variables to disk.
-        save_path = self.saver.save(self.sess,
-                                    os.path.join(self.save_path,
-                                                 save_filename)+'.ckpt')
+        save_path = self.saver.save(
+            self.sess, os.path.join(self.save_path, save_filename) + '.ckpt')
         print("Model saved in file: %s" % save_path)
