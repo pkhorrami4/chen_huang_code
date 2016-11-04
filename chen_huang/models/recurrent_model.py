@@ -86,13 +86,28 @@ class RecurrentModel(object):
             print 'total cost shape: ', self.total_cost.get_shape()
 
         # Create optimizer
-        lr = tf.Variable(self.learning_rate, trainable=False)
+        #lr = tf.Variable(self.learning_rate, trainable=False)
+        global_step = tf.Variable(0, trainable=False)
+        starter_lr = tf.Variable(self.learning_rate, trainable=False)
+        if self.anneal_lr:
+            decay_steps = 1400
+            decay_rate = 0.1
+            lr = tf.train.exponential_decay(
+                starter_lr,
+                global_step,
+                decay_steps,
+                decay_rate,
+                staircase=True)
+        else:
+            lr = starter_lr
+
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(
             tf.gradients(self.total_cost, tvars), 1)
         # optimizer = tf.train.AdamOptimizer(learning_rate=lr)
         self.optimizer = tf.train.MomentumOptimizer(lr, 0.9)
-        self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
+        self.train_op = self.optimizer.apply_gradients(
+            zip(grads, tvars), global_step=global_step)
 
         # Setup Session
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
@@ -100,7 +115,7 @@ class RecurrentModel(object):
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
         # Grab summaries for Tensorboard
-        tf.scalar_summary('learning_rate', self.learning_rate)
+        tf.scalar_summary('learning_rate', lr)
         tf.scalar_summary('total_cost', self.total_cost)
         tf.scalar_summary('accuracy', self.accuracy)
         tf.scalar_summary('accuracy_clip', self.accuracy_clip)
@@ -124,6 +139,7 @@ class RecurrentModel(object):
         self.cell_type = model_dict['cell_type']
         self.num_layers = model_dict['num_layers']
         self.learning_rate = model_dict['learning_rate']
+        self.anneal_lr = model_dict['anneal_lr']
         self.save_path = model_dict['save_path']
         self.summary_path = model_dict['summary_path']
         if not os.path.exists(self.save_path):
