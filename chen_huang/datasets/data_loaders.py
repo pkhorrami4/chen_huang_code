@@ -3,11 +3,17 @@ import numpy
 
 
 class LandmarkDataLoader(object):
-    def __init__(self, dataset_path, feat_type, fold_type, which_fold):
+    def __init__(self,
+                 dataset_path,
+                 feat_type,
+                 fold_type,
+                 which_fold,
+                 remove_easy=False):
         self.dataset_path = dataset_path
         self.feat_type = feat_type
         self.fold_type = fold_type
         self.which_fold = which_fold
+        self.remove_easy = remove_easy
 
         assert feat_type in ['landmarks', 'landmarks_diff'
                              ], 'feat_type must be landmarks or landmarks_diff'
@@ -35,6 +41,13 @@ class LandmarkDataLoader(object):
         X_all = numpy.vstack(X_all)
         y_all = numpy.hstack(y_all)
         print 'X has shape: ', X_all.shape, 'y has shape: ', y_all.shape
+
+        if self.remove_easy:
+            print 'Removing Easy Labels (frames with expression and w/o speech)'
+            not_easy_mask = numpy.where(y_all[-3, :].astype('int') != 1)[0]
+            X_all = X_all[not_easy_mask, :]
+            y_all = y_all[:, not_easy_mask]
+            print 'X has shape: ', X_all.shape, 'y has shape: ', y_all.shape
 
         data_dict = {}
         data_dict['X'] = X_all
