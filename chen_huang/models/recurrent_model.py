@@ -108,7 +108,7 @@ class RecurrentModel(object):
 
         # Setup Session
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
-        #self.sess = tf.Session()
+        # self.sess = tf.Session()
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
 
         # Grab summaries for Tensorboard
@@ -272,3 +272,136 @@ class RecurrentModel(object):
         save_path = self.saver.save(
             self.sess, os.path.join(self.save_path, save_filename) + '.ckpt')
         print("Model saved in file: %s" % save_path)
+
+
+class BiDirRecurrentModel(RecurrentModel):
+    def __init__(self, model_dict, verbose=False):
+        # Load hyperparameter settings
+        self._set_hyper_parameters(model_dict, verbose)
+
+        self.inputs = tf.placeholder(
+            tf.float32, [None, self.max_sequence_length, self.input_size])
+        self.targets = tf.placeholder(tf.int32,
+                                      [None, self.max_sequence_length])
+        # self.sequence_lengths = tf.placeholder(tf.int32, [None])
+        self.sequence_lengths = tf.placeholder(tf.int64, [None])
+        self.mask = tf.placeholder(tf.bool, [None, self.max_sequence_length])
+        self.batch_size = tf.shape(self.inputs)[0]
+
+        if self.cell_type == 'basic_rnn':
+            self.single_rnn_cell = tf.nn.rnn_cell.BasicRNNCell(self.state_size)
+        elif self.cell_type == 'basic_lstm':
+            self.single_rnn_cell = tf.nn.rnn_cell.BasicLSTMCell(
+                self.state_size, state_is_tuple=True)
+        elif self.cell_type == 'lstm':
+            self.single_rnn_cell = tf.nn.rnn_cell.LSTMCell(
+                self.state_size, state_is_tuple=True)
+        elif self.cell_type == 'gru':
+            self.single_rnn_cell = tf.nn.rnn_cell.GRUCell(self.state_size)
+        else:
+            raise Exception('cell_type incorrectly specified')
+
+        self.rnn_cell = tf.nn.rnn_cell.MultiRNNCell(
+            [self.single_rnn_cell] * self.num_layers, state_is_tuple=True)
+        self.outputs, self.states = tf.nn.bidirectional_dynamic_rnn(
+            cell_fw=self.rnn_cell,
+            cell_bw=self.rnn_cell,
+            inputs=self.inputs,
+            sequence_length=self.sequence_lengths,
+            dtype=tf.float32)
+        self.outputs_concat = tf.concat(2, self.outputs)
+        self.outputs_r = tf.reshape(
+            self.outputs_concat,
+            [self.batch_size * self.max_sequence_length, 2 * self.state_size])
+
+        # Output matrix parameters
+        stddev = 1.0
+        # in_dim = self.outputs_r.get_shape().as_list()[-1]
+        # print 'in_dim: ', in_dim
+        # stddev = 1.0 / numpy.sqrt(in_dim)
+        self.softmax_w = tf.get_variable(
+            "softmax_w", [2 * self.state_size, self.num_classes],
+            initializer=tf.random_normal_initializer(
+                mean=0.0, stddev=stddev))
+        self.softmax_b = tf.get_variable(
+            "softmax_b", [self.num_classes],
+            initializer=tf.constant_initializer(0.0))
+        self.logits = tf.matmul(self.outputs_r,
+                                self.softmax_w) + self.softmax_b
+        self.softmax = tf.nn.softmax(self.logits)
+
+        if verbose:
+            print 'outputs_fw shape: ', self.outputs[0].get_shape()
+            print 'outputs_bw shape: ', self.outputs[1].get_shape()
+            print 'outputs_r shape: ', self.outputs_r.get_shape()
+            print 'logits shape: ', self.logits.get_shape()
+            print 'softmax shape: ', self.softmax.get_shape()
+
+        # Compute loss
+        self.targets_r = tf.reshape(
+            self.targets, [self.batch_size * self.max_sequence_length])
+        self.loss = tf.nn.seq2seq.sequence_loss_by_example(
+            [self.logits], [self.targets_r],
+            [tf.ones([self.batch_size * self.max_sequence_length])])
+        self.loss_sum = tf.reduce_sum(
+            tf.reshape(self.loss, [self.batch_size, self.max_sequence_length])
+            * tf.cast(self.mask, tf.float32),
+            reduction_indices=1)
+        self.total_cost = tf.reduce_mean(self.loss_sum / tf.cast(
+            self.sequence_lengths, tf.float32))
+
+        # Compute accuracy
+        self.accuracy = self._compute_accuracy(self.softmax, self.targets_r,
+                                               self.mask)
+        self.accuracy_clip = self._compute_accuracy_clip(
+            self.softmax, self.targets, self.mask)
+        self.preds_clip = self._compute_preds_clip(self.softmax, self.targets,
+                                                   self.mask)
+
+        if verbose:
+            print 'targets_r shape: ', self.targets_r.get_shape()
+            print 'loss shape: ', self.loss.get_shape()
+            print 'loss_sum shape: ', self.loss_sum.get_shape()
+            print 'total cost shape: ', self.total_cost.get_shape()
+
+        # Create optimizer
+        global_step = tf.Variable(0, trainable=False)
+        starter_lr = tf.Variable(self.learning_rate, trainable=False)
+        if self.decay_lr:
+            lr = tf.train.exponential_decay(
+                starter_lr,
+                global_step,
+                self.decay_steps,
+                self.decay_rate,
+                staircase=True)
+        else:
+            lr = starter_lr
+
+        tvars = tf.trainable_variables()
+        grads, _ = tf.clip_by_global_norm(
+            tf.gradients(self.total_cost, tvars), 1)
+        # optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+        self.optimizer = tf.train.MomentumOptimizer(lr, 0.9)
+        self.train_op = self.optimizer.apply_gradients(
+            zip(grads, tvars), global_step=global_step)
+
+        # Setup Session
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.333)
+        # self.sess = tf.Session()
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+
+        # Grab summaries for Tensorboard
+        tf.scalar_summary('learning_rate', lr)
+        tf.scalar_summary('total_cost', self.total_cost)
+        tf.scalar_summary('accuracy', self.accuracy)
+        tf.scalar_summary('accuracy_clip', self.accuracy_clip)
+        self.merged = tf.merge_all_summaries()
+        self.summary_writer_train = tf.train.SummaryWriter(
+            self.summary_path + '/train', self.sess.graph)
+        self.summary_writer_val = tf.train.SummaryWriter(
+            self.summary_path + '/val', self.sess.graph)
+
+        # Add saver
+        self.saver = tf.train.Saver(max_to_keep=None)
+
+        self.sess.run(tf.initialize_all_variables())
