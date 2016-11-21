@@ -101,8 +101,11 @@ class RecurrentModel(object):
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(
             tf.gradients(self.total_cost, tvars), 1)
-        # optimizer = tf.train.AdamOptimizer(learning_rate=lr)
-        self.optimizer = tf.train.MomentumOptimizer(lr, 0.9)
+        if self.optimizer == 'adam':
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+        else:
+            self.optimizer = tf.train.MomentumOptimizer(lr, 0.9)
+
         self.train_op = self.optimizer.apply_gradients(
             zip(grads, tvars), global_step=global_step)
 
@@ -136,6 +139,11 @@ class RecurrentModel(object):
         self.cell_type = model_dict['cell_type']
         self.num_layers = model_dict['num_layers']
         self.learning_rate = model_dict['learning_rate']
+        if 'optimizer' in model_dict.keys():
+            self.optimizer = model_dict['optimizer']
+        else:
+            self.optimizer = 'momentum'
+
         self.decay_lr = model_dict['decay_lr']
         if self.decay_lr:
             self.decay_steps = model_dict['decay_steps']
@@ -380,8 +388,10 @@ class BiDirRecurrentModel(RecurrentModel):
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(
             tf.gradients(self.total_cost, tvars), 1)
-        # optimizer = tf.train.AdamOptimizer(learning_rate=lr)
-        self.optimizer = tf.train.MomentumOptimizer(lr, 0.9)
+        if self.optimizer == 'adam':
+            self.optimizer = tf.train.AdamOptimizer(learning_rate=lr)
+        else:
+            self.optimizer = tf.train.MomentumOptimizer(lr, 0.9)
         self.train_op = self.optimizer.apply_gradients(
             zip(grads, tvars), global_step=global_step)
 
