@@ -72,7 +72,7 @@ class LandmarkDataLoader2(object):
         self.remove_easy = remove_easy
 
         if self.feat_type == []:
-            self.feat_type = ['landmarks', 'landmarks_diff',
+            self.feat_type = ['landmarks', 'landmarks_align', 'landmarks_diff',
                               'landmarks_diff_w_openface_template',
                               'l2_dists_angles']
         assert fold_type in ['subj_dep', 'subj_ind'
