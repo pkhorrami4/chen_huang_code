@@ -67,14 +67,10 @@ class LandmarkDataLoader2(object):
                  remove_easy=False):
         self.dataset_path = dataset_path
         self.feat_type = feat_type
-        #self.which_feat = which_feat
         self.fold_type = fold_type
         self.which_fold = which_fold
         self.remove_easy = remove_easy
 
-        #assert feat_type in ['landmarks', 'landmarks_diff', 'landmarks_diff_w_mean_shape',
-        #                     'landmarks_diff_w_openface_template'
-        #                     ], 'feat_type must be landmarks, or landmarks_diff'
         if self.feat_type == []:
             self.feat_type = ['landmarks', 'landmarks_diff',
                               'landmarks_diff_w_openface_template',
@@ -83,14 +79,10 @@ class LandmarkDataLoader2(object):
                              ], 'fold_type must be subj_dep or subj_ind'
 
     def load(self):
-        #self.X = numpy.load(
-        #    os.path.join(self.dataset_path, self.feat_type + '.npy'))
         self.data_dict = numpy.load(
             os.path.join(self.dataset_path, 'data_dict.npy'))
         self.data_dict = self.data_dict[()]
         self.y = numpy.load(os.path.join(self.dataset_path, 'y.npy'))
-        #print 'X:', self.X.shape
-        #print 'y:', self.y.shape
 
         X_all = []
         for feat_ in self.feat_type:
